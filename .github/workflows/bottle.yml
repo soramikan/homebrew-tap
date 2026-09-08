@@ -16,7 +16,6 @@ permissions:
 env:
   HOMEBREW_NO_AUTO_UPDATE: "1"
   HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1"
-  HOMEBREW_NO_INSTALL_FROM_API: "1"
 
 jobs:
   build:
@@ -31,7 +30,7 @@ jobs:
           - label: linux-x64
             os: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+      - uses: actions/checkout@v5
       - name: Link this tap into Homebrew
         shell: bash
         run: |
@@ -50,7 +49,7 @@ jobs:
           mkdir -p bottles
           cd bottles
           brew bottle --json --root-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/lnako-${{ inputs.version }}" soramikan/tap/lnako
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+      - uses: actions/upload-artifact@v4
         with:
           name: bottle-${{ matrix.label }}
           path: bottles/*
@@ -61,12 +60,18 @@ jobs:
     needs: build
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
-      - uses: actions/download-artifact@634f93cb2916e3fdff4798551b0b23f03a8ba03b # v5.0.0
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v5
         with:
           pattern: bottle-*
           path: bottles
           merge-multiple: true
+      - name: Link this tap into Homebrew
+        shell: bash
+        run: |
+          tap_dir="$(brew --repository)/Library/Taps/soramikan/homebrew-tap"
+          mkdir -p "$(dirname "$tap_dir")"
+          ln -sfn "$GITHUB_WORKSPACE" "$tap_dir"
       - name: Merge bottle block into formula
         shell: bash
         run: brew bottle --merge --write --no-commit bottles/*.json
@@ -76,10 +81,9 @@ jobs:
         shell: bash
         run: |
           tag="lnako-${{ inputs.version }}"
-          gh release create "$tag" --repo "$GITHUB_REPOSITORY" \
+          gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target main \
             --title "lnako ${{ inputs.version }} bottles" \
-            --notes "Homebrew bottles for lnako ${{ inputs.version }}" \
-            --verify-tag=false 2>/dev/null || true
+            --notes "Homebrew bottles for lnako ${{ inputs.version }}" || true
           gh release upload "$tag" --repo "$GITHUB_REPOSITORY" bottles/*.bottle.tar.gz --clobber
       - name: Commit updated formula
         shell: bash
