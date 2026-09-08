@@ -84,6 +84,7 @@ jobs:
           tap_dir="$(brew --repository)/Library/Taps/soramikan/homebrew-tap"
           mkdir -p "$(dirname "$tap_dir")"
           ln -sfn "$GITHUB_WORKSPACE" "$tap_dir"
+          brew trust soramikan/tap
       - name: Merge bottle block into formula
         shell: bash
         run: brew bottle --merge --write --no-commit bottles/*.json
