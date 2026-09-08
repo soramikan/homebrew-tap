@@ -6,6 +6,12 @@ class Lnako < Formula
   sha256 "02f309dcc8a7058faabda06331c74ffcdf1bb46b0efe46ac4e3d86c85eac5139"
   license "MIT"
 
+  bottle do
+    root_url "https://github.com/soramikan/homebrew-tap/releases/download/lnako-0.1.0"
+    sha256 cellar: :any_skip_relocation, arm64_sequoia: "a060a29dc550f5b07f0785aac4ca54452e5c9ad80a100d4d0233acd55bf1195a"
+    sha256 cellar: :any_skip_relocation, x86_64_linux:  "abac85728c2340bc45fd4c0c40c4fb043e152ae2381e48f100f5e1b0e9a75198"
+  end
+
   depends_on "zig" => :build
 
   # QuickJS is statically linked for `--compat-js` mode only.
