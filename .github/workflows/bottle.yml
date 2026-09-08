@@ -97,7 +97,12 @@ jobs:
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target main \
             --title "lnako ${{ inputs.version }} bottles" \
             --notes "Homebrew bottles for lnako ${{ inputs.version }}" || true
-          gh release upload "$tag" --repo "$GITHUB_REPOSITORY" bottles/*.bottle.tar.gz --clobber
+          # bottleのローカル名は`name--ver`（二重ハイフン）だが、root_urlからの
+          # ダウンロードURLは`name-ver`（単一ハイフン）になるためrenameする。
+          for f in bottles/*.bottle.tar.gz; do
+            gh release upload "$tag" --repo "$GITHUB_REPOSITORY" "$f" \
+              --clobber --name "$(basename "$f" | sed 's/--/-/')"
+          done
       - name: Commit updated formula
         shell: bash
         run: |
