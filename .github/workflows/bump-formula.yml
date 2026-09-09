@@ -1,0 +1,91 @@
+name: Bump formula
+
+# soramikan/lnakoの最新Releaseを検出し、formulaのurl/version/sha256を更新して
+# bottle workflowへ引き渡す。毎時scheduleと手動dispatchの両方で動く。
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "対象tag（例: v0.1.0。省略時は最新release）"
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  actions: write
+
+env:
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+
+jobs:
+  bump:
+    name: Update lnako formula
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Detect target release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag="${{ inputs.tag }}"
+          if [[ -z "$tag" ]]; then
+            tag="$(gh release view --repo soramikan/lnako --json tagName --jq '.tagName')"
+          fi
+          if [[ ! "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "tagがsemver形式ではありません: $tag" >&2
+            exit 1
+          fi
+          echo "tag=$tag" >> "$GITHUB_ENV"
+          echo "version=${tag#v}" >> "$GITHUB_ENV"
+      - name: Check whether formula already targets this release
+        shell: bash
+        run: |
+          set -euo pipefail
+          if grep -q "archive/refs/tags/${{ env.tag }}\.tar\.gz" Formula/lnako.rb; then
+            echo "up_to_date=true" >> "$GITHUB_ENV"
+            echo "formulaは既に ${{ env.tag }} を指しています"
+          else
+            echo "up_to_date=false" >> "$GITHUB_ENV"
+          fi
+      - name: Update formula source URL and checksum
+        if: env.up_to_date == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          url="https://github.com/soramikan/lnako/archive/refs/tags/${{ env.tag }}.tar.gz"
+          sha256="$(curl -fsSL "$url" | sha256sum | cut -d' ' -f1)"
+          # bottle blockは旧版のbinaryを指すため除去する（bottle workflowが再生成）。
+          URL="$url" VERSION="${{ env.version }}" SHA256="$sha256" ruby -e '
+            path = "Formula/lnako.rb"
+            text = File.read(path)
+            text = text.sub(/  bottle do\n.*?  end\n\n?/m, "")
+            text = text.sub(%r{^  url ".*"$}, %(  url "#{ENV["URL"]}"))
+            text = text.sub(/^  version ".*"$/, %(  version "#{ENV["VERSION"]}"))
+            text = text.sub(/^  sha256 "[0-9a-f]{64}"$/, %(  sha256 "#{ENV["SHA256"]}"))
+            File.write(path, text)
+          '
+          git diff -- Formula/lnako.rb
+      - name: Commit and push formula update
+        if: env.up_to_date == 'false'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if git diff --quiet; then
+            echo "formulaに変更なし"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Formula/lnako.rb
+          git commit -m "lnako ${{ env.version }} へ更新する"
+          git push
+      - name: Dispatch bottle build
+        if: env.up_to_date == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: gh workflow run bottle.yml --repo "$GITHUB_REPOSITORY" -f version="${{ env.version }}"
