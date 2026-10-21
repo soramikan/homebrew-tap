@@ -101,14 +101,22 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
+          set -euo pipefail
           tag="lnako-${{ inputs.version }}"
           gh release create "$tag" --repo "$GITHUB_REPOSITORY" --target main \
             --title "lnako ${{ inputs.version }} bottles" \
             --notes "Homebrew bottles for lnako ${{ inputs.version }}" || true
-          # bottleのローカル名は`name--ver`（二重ハイフン）だが、root_urlからの
-          # ダウンロードURLは`name-ver`（単一ハイフン）になるためrenameする。
-          # `gh release upload`には--nameがないため、upload前にローカル名を変更する。
-          for f in bottles/*.bottle.tar.gz; do
+          # bottle local names use `name--ver` (double hyphen). root_url download
+          # paths use `name-ver` (single hyphen), so rename before upload.
+          # Rebuilds produce `*.bottle.N.tar.gz` (not only `*.bottle.tar.gz`).
+          shopt -s nullglob
+          bottles=(bottles/*.bottle*.tar.gz)
+          if ((${#bottles[@]} == 0)); then
+            echo "no bottle tarballs under bottles/" >&2
+            ls -la bottles >&2 || true
+            exit 1
+          fi
+          for f in "${bottles[@]}"; do
             renamed="$(dirname "$f")/$(basename "$f" | sed 's/--/-/')"
             mv "$f" "$renamed"
             gh release upload "$tag" --repo "$GITHUB_REPOSITORY" "$renamed" --clobber
