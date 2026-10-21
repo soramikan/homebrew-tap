@@ -44,6 +44,14 @@ jobs:
           tap_dir="$(brew --repository)/Library/Taps/soramikan/homebrew-tap"
           mkdir -p "$(dirname "$tap_dir")"
           ln -sfn "$GITHUB_WORKSPACE" "$tap_dir"
+      # HOMEBREW_NO_AUTO_UPDATE is set for reproducibility, so runners keep a
+      # stale core tap (e.g. zig 0.16 while product needs 0.17). Refresh before pour.
+      - name: Refresh Homebrew formulae
+        shell: bash
+        run: |
+          set -euo pipefail
+          brew update
+          brew info --json=v2 zig | python3 -c 'import json,sys; f=json.load(sys.stdin)["formulae"][0]; print(f"zig formula version={f[\"versions\"][\"stable\"]}")'
       - name: Install from source for bottling
         shell: bash
         run: brew install --verbose --build-bottle soramikan/tap/lnako
