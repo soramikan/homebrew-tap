@@ -51,7 +51,7 @@ jobs:
         run: |
           set -euo pipefail
           brew update
-          brew info --json=v2 zig | python3 -c 'import json,sys; f=json.load(sys.stdin)["formulae"][0]; print(f"zig formula version={f[\"versions\"][\"stable\"]}")'
+          brew info --json=v2 zig | jq -r '.formulae[0].versions.stable | "zig formula version=\(.)"'
       - name: Install from source for bottling
         shell: bash
         run: brew install --verbose --build-bottle soramikan/tap/lnako
