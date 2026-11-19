@@ -1,17 +1,10 @@
 class Lnako < Formula
   desc "Nadesiko 3 v3.7.24 compatible compiler (Zig + LLVM native/AOT)"
   homepage "https://github.com/soramikan/lnako"
-  url "https://github.com/soramikan/lnako/archive/refs/tags/v0.2.4.tar.gz"
-  version "0.2.4"
-  sha256 "898cfd8511f80edf06b4f8323263d8bdf5d1cdc1643ff03225170ce7940fa8e9"
+  url "https://github.com/soramikan/lnako/archive/refs/tags/v0.2.5.tar.gz"
+  version "0.2.5"
+  sha256 "e78605dc3bf15e18a3c1c10ea00044e3345f77fe6fb2c7a9e11961d53fee1d7a"
   license "MIT"
-
-  bottle do
-    root_url "https://github.com/soramikan/homebrew-tap/releases/download/lnako-0.2.4"
-    rebuild 1
-    sha256 cellar: :any_skip_relocation, arm64_sequoia: "4c668a1178f72f4b8475a6aef5bc407631f151d55ed504306852d38d6a3d0099"
-    sha256 cellar: :any_skip_relocation, x86_64_linux:  "708434ec5273748fc49f3c2552a18fe31b670d27f293b633f9e45c92e378515c"
-  end
 
   depends_on "zig" => :build
 
